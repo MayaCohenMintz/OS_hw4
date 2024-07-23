@@ -17,10 +17,7 @@ void initQueue(void)
     This function will be called before the queue is used. This is your chance to initialize your data
     structure.
     */
-   // Initialization code from rec 9 (check if this should be outside of this function)
-    mtx_t qlock;
-    cnd_t notEmpty;
-    /* … initialization code … */
+
 }
 
 void destroyQueue(void)
@@ -35,26 +32,11 @@ void destroyQueue(void)
 void enqueue(void*)
 {
     /*Adds an item to the queue.*/
-    // Skeleton from rec 9:
-    mtx_lock(&qlock);
-    /* … add x to queue … */
-    cnd_signal(&notEmpty);
-    mtx_unlock(&qlock);
-
 }
 
 void* dequeue(void)
 {
     /*Remove an item from the queue. Will block if empty.*/
-    mtx_lock(&qlock);
-    while <queue is empty> 
-    {
-        cnd_wait(&notEmpty,&qlock);
-    }
-    /* … remove item from queue … */
-    mtx_unlock(&qlock);
-    /* .. return removed item */
-
 }
 
 bool tryDequeue(void**)
@@ -63,7 +45,7 @@ bool tryDequeue(void**)
     Try to remove an item from the queue. If succeeded, return it via the argument and return true.
     If the queue is empty, return false and leave the pointer unchanged.
     */
- 
+
 }
 
 size_t size(void)
