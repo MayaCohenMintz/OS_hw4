@@ -9,3 +9,6 @@ thread->data=data after popping and before signaling? (line 217-219)
 - "else" in line 248: why do we only get here if size of queue is smaller than waiting threads?
 compare this to first_draft, see how it is handled there
 - in tryqueue, why is only queue.size = 0 checked?
+
+
+NOTE:
