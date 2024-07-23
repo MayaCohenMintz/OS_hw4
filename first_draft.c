@@ -1,24 +1,30 @@
-// queue.c - adding specification that threads are woken up in FIFO order. 
-
 #include <stdlib.h>
 #include <stdatomic.h>
 #include <threads.h>
 #include <stdbool.h>
 #include <assert.h>
 
-// Define the node structure for the queue
-typedef struct Node {
+// Define the node structure that the queue is built of 
+typedef struct Node { 
     void* data;
-    struct Node* next;
+    struct Node* next; // next item in queue
 } Node;
 
 // Define the thread node structure for keeping track of waiting threads
 typedef struct ThreadNode {
     cnd_t cond; // every thread has a cond associated with it
     struct ThreadNode* next;
+    // ROY included data connected to this thread 
 } ThreadNode;
 
-// Define the queue structure
+// ROY defined thread queue like this: 
+// typedef struct ThreadQueue {
+//     ThreadNode* front;
+//     ThreadNode* rear;
+//     size_t waiting;
+// } ThreadQueue;
+
+// Define the actual queue structure
 typedef struct Queue {
     Node* front;
     Node* rear;
@@ -29,11 +35,13 @@ typedef struct Queue {
     atomic_size_t size;
     atomic_size_t waiting;
     atomic_size_t visited;
+    // ROY did not have as attributes of queue: waiting_front, waiting_rear, waiting
 } Queue;
 
-// Global queue instance
-// MAYA - why a global instance? Does that mean that there can be only one queue at any given time?
+// Global Queue instance 
+// MAYA - does that mean we have at most one Queue at any given time?
 static Queue queue;
+
 
 // Initialize the queue
 void initQueue(void) {

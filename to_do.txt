@@ -1,0 +1,11 @@
+TO DO
+- create helper functions 
+- figure out - what does pop_thread do? Why do I need to do 
+thread->data=data after popping and before signaling? (line 217-219)
+- figure out - why does a ThreadNode need the associated data?
+- in line 244: why is visited incremented here? Where does the actual pop happen?
+- difference in roy between dequeue and trydequeue
+- in line 237: why do we need to check if th_queue.waiting is larger than size of queue?
+- "else" in line 248: why do we only get here if size of queue is smaller than waiting threads?
+compare this to first_draft, see how it is handled there
+- in tryqueue, why is only queue.size = 0 checked?
