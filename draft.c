@@ -1,4 +1,4 @@
-// queue.c
+// queue.c - adding specification that threads are woken up in FIFO order. 
 
 #include <stdlib.h>
 #include <stdatomic.h>
@@ -12,26 +12,36 @@ typedef struct Node {
     struct Node* next;
 } Node;
 
+// Define the thread node structure for keeping track of waiting threads
+typedef struct ThreadNode {
+    cnd_t cond; // every thread has a cond associated with it
+    struct ThreadNode* next;
+} ThreadNode;
+
 // Define the queue structure
 typedef struct Queue {
     Node* front;
     Node* rear;
-    mtx_t mutex;
-    cnd_t cond;
+    mtx_t mutex; // note that each queue requires only one mutex, but number of conds = number of threads
+    // associated with the queue
+    ThreadNode* waiting_front;
+    ThreadNode* waiting_rear; // MAYA why do we need one for rear?
     atomic_size_t size;
     atomic_size_t waiting;
     atomic_size_t visited;
 } Queue;
 
 // Global queue instance
+// MAYA - why a global instance? Does that mean that there can be only one queue at any given time?
 static Queue queue;
 
 // Initialize the queue
 void initQueue(void) {
     queue.front = NULL;
     queue.rear = NULL;
+    queue.waiting_front = NULL; 
+    queue.waiting_rear = NULL;
     mtx_init(&queue.mutex, mtx_plain);
-    cnd_init(&queue.cond);
     atomic_init(&queue.size, 0);
     atomic_init(&queue.waiting, 0);
     atomic_init(&queue.visited, 0);
@@ -45,10 +55,16 @@ void destroyQueue(void) {
         queue.front = queue.front->next;
         free(temp);
     }
+    while (queue.waiting_front != NULL) { 
+        ThreadNode* temp = queue.waiting_front;
+        queue.waiting_front = queue.waiting_front->next;
+        cnd_destroy(&temp->cond);
+        free(temp);
+    }
     queue.rear = NULL;
+    queue.waiting_rear = NULL;
     mtx_unlock(&queue.mutex);
     mtx_destroy(&queue.mutex);
-    cnd_destroy(&queue.cond);
 }
 
 // Add an item to the queue
@@ -60,31 +76,61 @@ void enqueue(void* item) {
 
     mtx_lock(&queue.mutex);
 
-    if (queue.rear == NULL) {
+    if (queue.rear == NULL) { // if queue was empty, the new node is both the front and the rear
         queue.front = newNode;
     } else {
         queue.rear->next = newNode;
     }
-    queue.rear = newNode;
+    queue.rear = newNode; // note that new node is always the rear
 
-    atomic_fetch_add(&queue.size, 1);
+    atomic_fetch_add(&queue.size, 1); // incrementing queue size
 
-    // Wake up one waiting thread
-    cnd_signal(&queue.cond);
+    // Wake up the first waiting thread (if any)
+    if (queue.waiting_front != NULL) { // if there is at least one sleeping thread waiting to be woken up by an enqueue operation
+        ThreadNode* waitingThread = queue.waiting_front; // this is the oldest thread, i.e. the one that should be used
+        // now according to FIFO order
+        queue.waiting_front = queue.waiting_front->next;
+        if (queue.waiting_front == NULL) { // if there are now no threads waiting, update rear
+            queue.waiting_rear = NULL;
+        }
+        cnd_signal(&waitingThread->cond); // signal the thread to be woken up using its specific cond var 
+        free(waitingThread); // MAYA why do we need to free this thread?
+    }
+
     mtx_unlock(&queue.mutex);
 }
 
-// Remove an item from the queue, blocking if empty
+// Remove an item from the queue, blocking if empty 
 void* dequeue(void) {
+    void* item;
+
     mtx_lock(&queue.mutex);
-    while (queue.front == NULL) {
+    while (queue.front == NULL) { // if queue is empty
+        // Add this thread to the waiting list
+        ThreadNode* newThread = malloc(sizeof(ThreadNode));
+        assert(newThread != NULL); // Assume malloc does not fail
+        cnd_init(&newThread->cond);
+        newThread->next = NULL;
+        
+        if (queue.waiting_rear == NULL) { // if this is the only thread, make it both front and rear
+            queue.waiting_front = newThread;
+        } else {
+            queue.waiting_rear->next = newThread;
+        }
+        queue.waiting_rear = newThread;
         atomic_fetch_add(&queue.waiting, 1);
-        cnd_wait(&queue.cond, &queue.mutex);
+        
+        // Wait for an item to be added to the queue (this is the "blocking")
+        cnd_wait(&newThread->cond, &queue.mutex);
         atomic_fetch_sub(&queue.waiting, 1);
+        // MAYA problem: why destroy the cond and thread?
+        // MAYA problem: how do we make sure the mutex is passed straight to the correct thread?
+        cnd_destroy(&newThread->cond);
+        free(newThread);
     }
 
     Node* temp = queue.front;
-    void* item = temp->data;
+    item = temp->data;
     queue.front = queue.front->next;
     if (queue.front == NULL) {
         queue.rear = NULL;
