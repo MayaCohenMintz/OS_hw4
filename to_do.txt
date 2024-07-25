@@ -1,3 +1,25 @@
+TO RUN ROY'S TESTER:
+1. change permissions: $ chmod +x tester 
+2. compile: $ gcc -O3 -D_POSIX_C_SOURCE=200809 -Wall -std=c11 -pthread tester_from_roy_drive.c -o tester
+3. run: $ ./tester 
+
+ROY'S TESTER ON DONT_CHANGE
+passes everything apart from fifo
+
+ROY'S TESTER ON FIRST_DRAFT
+passes: 
+destroyQueue
+enqueue and dequeue
+tryDequeue
+size tester
+
+fails:
+the rest, including fifo
+
+NEXT STEPS:
+write in same structure as roy 
+
+
 TO DO
 - create helper functions 
 - figure out - what does pop_thread do? Why do I need to do 

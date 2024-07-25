@@ -10,23 +10,23 @@
 
 // -------- TYPEDEFS ----------
 
-// Define the node structure that the queue is built of 
-typedef struct Node { 
-    void* data;
-    struct Node* next; // next item in queue
-} Node;
+// Define the structure that the queue is built of 
+typedef struct ItemNode { 
+    void* pdata;
+    struct ItemNode* pnext; // next item in queue
+} ItemNode;
 
 // Define the thread node structure for keeping track of waiting threads
 typedef struct ThreadNode {
     cnd_t cond_var; // every thread has a cv + data associated with it
     void* pdata; // 
-    struct ThreadNode* next;
+    struct ThreadNode* pnext;
 } ThreadNode;
 
 // Define the actual queue, built of Nodes
 typedef struct Queue {
-    Node* pfront;
-    Node* prear;
+    ItemNode* pfront;
+    ItemNode* prear;
     mtx_t mutex; // note that each queue requires only one mutex, but number of conds = number of threads associated with the queue
     size_t size;
     size_t visited;
@@ -44,10 +44,13 @@ static Queue queue;
 static ThreadQueue th_queue;
 
 // -------- HELPER FUNCTIONS SIGNATURES ----------
-remove_first_th(); // like pop() for th_queue
-create_node(); // creates new Node
-append_node(Node* pnode); // appends node to Queue
-remove_first_node(); // like pop() for queue
+create_item_node(void* pdata); // creates new ItemNode corresponding to pdata
+append_item_node(ItemNode* pitem); // appends ItemNode to Queue
+remove_first_item_node(); // removes and returns first ItemNode in queue (like pop())
+
+create_th_node(void* pdata); // creates new ThreadNode corresponding to pdata
+append_th_node(ThreadNode* pth); // appends ThreadNode to ThreadQueue
+remove_first_th_node(); // removes and returns first ThreadNode in th_queue (like pop())
 
 
 // -------- HELPER FUNCTIONS IMPLEMENTATION ----------
@@ -80,13 +83,13 @@ void destroyQueue(void)
 void enqueue(void* pdata)
 {
     ThreadNode* pthread;
-    Node* pnode;
+    ItemNode* pnode;
 
     mtx_lock(&queue.mutex);
     if(th_queue.waiting == 0)
     {
         // no thread is waiting - insert item into queue 
-        pnode = create_node();
+        pnode = create_item_node(pdata);
         append_node(pnode);
     }
     else
