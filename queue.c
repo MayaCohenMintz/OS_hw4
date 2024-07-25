@@ -44,16 +44,44 @@ static Queue queue;
 static ThreadQueue th_queue;
 
 // -------- HELPER FUNCTIONS SIGNATURES ----------
-create_item_node(void* pdata); // creates new ItemNode corresponding to pdata
-append_item_node(ItemNode* pitem); // appends ItemNode to Queue
+ItemNode* create_item_node(void* pdata); // creates new ItemNode corresponding to pdata
+void append_item_node(ItemNode* pitem); // appends ItemNode to Queue
 remove_first_item_node(); // removes and returns first ItemNode in queue (like pop())
 
-create_th_node(void* pdata); // creates new ThreadNode corresponding to pdata
-append_th_node(ThreadNode* pth); // appends ThreadNode to ThreadQueue
+ThreadNode* create_th_node(void* pdata); // creates new ThreadNode corresponding to pdata
+void append_th_node(ThreadNode* pth); // appends ThreadNode to ThreadQueue
 remove_first_th_node(); // removes and returns first ThreadNode in th_queue (like pop())
 
 
 // -------- HELPER FUNCTIONS IMPLEMENTATION ----------
+ItemNode* create_item_node(void* pdata)
+{
+    ItemNode* pnew;
+
+    pnew = (ItemNode*)malloc(sizeof(ItemNode)); // No error checking since we assume malloc never fails
+    pnew->pdata = pdata;
+    pnew->pnext = NULL;
+    return pnew;
+}
+
+void append_item_node(ItemNode* pitem)
+{
+    ItemNode* pcurr_item;
+
+    if(queue.size == 0)
+    {
+        queue.pfront = pitem;
+        queue.prear = pitem;
+    }
+    else
+    {
+        queue.prear->pnext = pitem;
+        queue.prear = queue.prear->pnext;
+    }
+    queue.size++;
+}
+
+
 
 // -------- LIBRARY FUNCTIONS IMPLEMENTATION ----------
 
