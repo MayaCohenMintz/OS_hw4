@@ -221,14 +221,34 @@ void* dequeue(void)
     return pret_data;
 }
 
-bool tryDequeue(void** changethis)
+bool tryDequeue(void** returned_ptr)
 {
     /*
     Try to remove an item from the queue. If succeeded, return it via the argument and return true.
     If the queue is empty, return false and leave the pointer unchanged.
     */
-   return true;
 
+    bool ret;
+    ItemNode* pret = NULL;
+
+    mtx_lock(&queue.mutex);
+    if(queue.size == 0)  // no item to dequeue
+    {
+    ret = false;
+    }
+    
+    else // there is an item to dequeue
+    {
+        // QUESTION how do I make this FIFO?
+        // remove front of queue
+        pret = remove_first_item_node(&queue);
+        ret = true;
+    }
+    mtx_unlock(&queue.mutex);
+    // inserting popped item's data into returned_ptr so that we can free popped item
+    *returned_ptr = pret->pdata;
+    free(pret);
+    return ret;
 }
 
 size_t size(void)
