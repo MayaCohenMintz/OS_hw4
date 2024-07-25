@@ -91,7 +91,7 @@ ItemNode* remove_first_item_node(Queue* pqueue)
         pqueue->prear = NULL;
     }
 
-    pqueue->visited--;
+    pqueue->visited++;
     return p_removed;
 }
 
@@ -172,7 +172,7 @@ void enqueue(void* pdata)
     mtx_lock(&queue.mutex);
     if(th_queue.waiting == 0)
     {
-        // no thread is waiting - insert item into queue 
+        // no thread is waiting - insert item into queue without waking a thread up 
         pitem = create_item_node(pdata);
         append_item_node(&queue, pitem);
     }
@@ -189,20 +189,36 @@ void enqueue(void* pdata)
 void* dequeue(void)
 {
     ItemNode* pitem;
-    void* pdata = NULL;
+    void* pret_data = NULL;
+    mtx_lock(&queue.mutex);
 
-    if(queue.size > 0 && th_queue.waiting <= queue.size)
+    if(queue.size == 0) // no item to dequeue
     {
-        
+        // create thread to be associated with this dequeue action, and append it to th_queue
+        ThreadNode* pth = create_th_node();
+        append_th_node(&th_queue, pth);
+        // put thread to sleep so it can be signaled by enqueue when another item is inserted 
+        cnd_wait(&(pth->cond_var), &queue.mutex);
+        // pth is popped from th_queue by enqueue
+        // enqueue transfers the item's data to pth, so it can be returned before even being inserted into queue
+        // now transferring data associated with dequeued item to be returned
+        pret_data = pth->pdata;
+        // freeing removed thread
+        free(pth);
     }
 
-    else
+    else // there is an item in the queue to dequeue
     {
-        // in this case, queue.size == 0 OR th_queue.waiting > queue.size
-
-
+        // QUESTION how do I make this FIFO?
+        // remove front of queue
+        pitem = remove_first_item_node(&queue);
+        // transfer the data from popped front to pret_data
+        pret_data = pitem->pdata;
+        // free popped item
+        free(pitem);
     }
-
+    mtx_unlock(&queue.mutex);
+    return pret_data;
 }
 
 bool tryDequeue(void** changethis)
