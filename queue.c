@@ -1,7 +1,6 @@
 #include <stdint.h>
 #include <stddef.h>
 #include <stdbool.h>
-//#include <stdatomic.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -46,11 +45,12 @@ static ThreadQueue th_queue;
 ItemNode* create_item_node(void* pdata); // creates new ItemNode corresponding to pdata
 void append_item_node(Queue* pqueue, ItemNode* pitem); // appends ItemNode to Queue
 ItemNode* remove_first_item_node(Queue* pqueue); // removes and returns first ItemNode in queue (like pop())
+void iter_free_item_nodes(Queue* pqueue); // iteratively frees queue 
 
 ThreadNode* create_th_node(); // creates new ThreadNode (the pdata field is set in a different function)
 void append_th_node(ThreadQueue* pth_queue, ThreadNode* pth); // appends ThreadNode to ThreadQueue
 ThreadNode* remove_first_th_node(ThreadQueue* pth_queue); // removes and returns first ThreadNode in th_queue (like pop())
-
+void iter_free_thread_nodes(ThreadQueue* pth_queue); // iteratively frees th_queue
 
 // -------- QUEUE HELPER FUNCTIONS IMPLEMENTATION ----------
 ItemNode* create_item_node(void* pdata)
@@ -93,6 +93,26 @@ ItemNode* remove_first_item_node(Queue* pqueue)
 
     pqueue->visited++;
     return p_removed;
+}
+
+void iter_free_item_nodes(Queue* pqueue)
+{
+    ItemNode* pcurr;
+    ItemNode* pto_free; // this is the ItemNode to be freed
+
+    // Iteratively freeing ItemNodes in queue
+    pcurr = queue.pfront;
+    while(pcurr->pnext != NULL)
+    {
+    pto_free = pcurr;
+    pcurr = pcurr->pnext;
+    pto_free->pdata = NULL; // the data was not allocated by me so no need to free it 
+    pto_free->pnext = NULL;
+    free(pto_free);
+    }
+    // now pcurr points to the last ItemNode in queue
+    pcurr->pdata = NULL;
+    free(pcurr);
 }
 
 // -------- THREADQUEUE HELPER FUNCTIONS IMPLEMENTATION ----------
@@ -139,6 +159,28 @@ ThreadNode* remove_first_th_node(ThreadQueue* pth_queue)
     return p_removed_th;
 }
 
+
+void iter_free_th_nodes(ThreadQueue* pth_queue)
+{
+    ThreadNode* pcurr;
+    ThreadNode* pto_free; // this is the ItemNode to be freed
+
+    // Iteratively freeing ItemNodes in queue
+    pcurr = th_queue.pfirst;
+    while(pcurr->pnext != NULL)
+    {
+    pto_free = pcurr;
+    pcurr = pcurr->pnext;
+    pto_free->pdata = NULL; // the data was not allocated by me so no need to free it 
+    pto_free->pnext = NULL;
+    cnd_destroy(&(pto_free->cond_var));
+    free(pto_free);
+    }
+    // now pcurr points to the last ThreadNode in th_queue
+    pcurr->pdata = NULL;
+    free(pcurr);
+}
+
 // -------- LIBRARY FUNCTIONS IMPLEMENTATION ----------
 
 void initQueue(void)
@@ -161,7 +203,19 @@ void destroyQueue(void)
     This function will be used for cleanup when the queue is no longer needed. It is possible for
     initQueue to be called afterwards.
     */
+    mtx_lock(&queue.mutex);
+    iter_free_item_nodes(&queue); // iteratively freeing ItemNodes in queue
+    queue.pfront = NULL;
+    queue.prear = NULL;
+    queue.size = 0;
+    queue.visited = 0;
+    iter_free_th_nodes(&th_queue); // iteratively freeing ThreadNodes in th_queue
+    th_queue.pfirst = NULL;
+    th_queue.plast = NULL;
+    th_queue.waiting = 0;
 
+    mtx_unlock(&queue.mutex);
+    mtx_destroy(&queue.mutex);
 }
 
 void enqueue(void* pdata)
