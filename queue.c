@@ -35,7 +35,7 @@ typedef struct Queue {
 typedef struct ThreadQueue {
     ThreadNode* pfirst;
     ThreadNode* plast;
-    size_t waiting
+    size_t waiting;
 } ThreadQueue;
 
 // -------- GLOBAL VARIABLES ----------
@@ -166,29 +166,29 @@ void destroyQueue(void)
 
 void enqueue(void* pdata)
 {
-    ThreadNode* pthread;
-    ItemNode* pnode;
+    ThreadNode* pth;
+    ItemNode* pitem;
 
     mtx_lock(&queue.mutex);
     if(th_queue.waiting == 0)
     {
         // no thread is waiting - insert item into queue 
-        pnode = create_item_node(pdata);
-        append_node(pnode);
+        pitem = create_item_node(pdata);
+        append_item_node(&queue, pitem);
     }
     else
     {
         // threads are waiting - wake up the right one
-        pthread = remove_first();
-        pthread -> pdata = pdata;
-        cnd_signal(&(pthread -> cond_var));
+        pth = remove_first_th_node(&th_queue);
+        pth -> pdata = pdata;
+        cnd_signal(&(pth->cond_var));
     }
     mtx_unlock(&queue.mutex);
 }
 
 void* dequeue(void)
 {
-    Node* pnode;
+    ItemNode* pitem;
     void* pdata = NULL;
 
     if(queue.size > 0 && th_queue.waiting <= queue.size)
@@ -211,19 +211,20 @@ bool tryDequeue(void** changethis)
     Try to remove an item from the queue. If succeeded, return it via the argument and return true.
     If the queue is empty, return false and leave the pointer unchanged.
     */
+   return true;
 
 }
 
 size_t size(void)
 {
     /*Return the current amount of items in the queue.*/
-
+    return queue.size;
 }
 
 size_t waiting(void)
 {
     /*Return the current amount of threads waiting for the queue to fill.*/
-
+    return th_queue.waiting;
 }
 
 size_t visited(void)
@@ -232,9 +233,11 @@ size_t visited(void)
     Return the amount of items that have passed inside the queue (i.e., inserted and then removed).
     This should not block due to concurrent operations, i.e., you may not take a lock at all.
     */
+   return queue.visited;
 }
 
 int main(int argc, char* args[])
 {
 
+    return 0;
 }
