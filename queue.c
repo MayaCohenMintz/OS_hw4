@@ -6,8 +6,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <threads.h>
-
-
+#include "queue.h"
 // -------- TYPEDEFS ----------
 
 // Define the structure that the queue is built of 
@@ -45,15 +44,15 @@ static ThreadQueue th_queue;
 
 // -------- HELPER FUNCTIONS SIGNATURES ----------
 ItemNode* create_item_node(void* pdata); // creates new ItemNode corresponding to pdata
-void append_item_node(ItemNode* pitem); // appends ItemNode to Queue
-remove_first_item_node(); // removes and returns first ItemNode in queue (like pop())
+void append_item_node(Queue* pqueue, ItemNode* pitem); // appends ItemNode to Queue
+ItemNode* remove_first_item_node(Queue* pqueue); // removes and returns first ItemNode in queue (like pop())
 
-ThreadNode* create_th_node(void* pdata); // creates new ThreadNode corresponding to pdata
-void append_th_node(ThreadNode* pth); // appends ThreadNode to ThreadQueue
-remove_first_th_node(); // removes and returns first ThreadNode in th_queue (like pop())
+ThreadNode* create_th_node(); // creates new ThreadNode (the pdata field is set in a different function)
+void append_th_node(ThreadQueue* pth_queue, ThreadNode* pth); // appends ThreadNode to ThreadQueue
+ThreadNode* remove_first_th_node(ThreadQueue* pth_queue); // removes and returns first ThreadNode in th_queue (like pop())
 
 
-// -------- HELPER FUNCTIONS IMPLEMENTATION ----------
+// -------- QUEUE HELPER FUNCTIONS IMPLEMENTATION ----------
 ItemNode* create_item_node(void* pdata)
 {
     ItemNode* pnew;
@@ -64,24 +63,81 @@ ItemNode* create_item_node(void* pdata)
     return pnew;
 }
 
-void append_item_node(ItemNode* pitem)
+void append_item_node(Queue* pqueue, ItemNode* pitem)
 {
-    ItemNode* pcurr_item;
-
-    if(queue.size == 0)
+    if(pqueue->size == 0)
     {
-        queue.pfront = pitem;
-        queue.prear = pitem;
+        pqueue->pfront = pitem;
+        pqueue->prear = pitem;
     }
     else
     {
-        queue.prear->pnext = pitem;
-        queue.prear = queue.prear->pnext;
+        pqueue->prear->pnext = pitem;
+        pqueue->prear = pqueue->prear->pnext;
     }
-    queue.size++;
+    pqueue->size++;
 }
 
+// this function will only be used when there is at least one ItemNode in the queue
+ItemNode* remove_first_item_node(Queue* pqueue)
+{
+    ItemNode* p_removed;
 
+    p_removed = pqueue->pfront;
+    pqueue->pfront = pqueue->pfront->pnext;
+    pqueue->size--;
+    if(pqueue->size == 0) // if size is 0 then 
+    {
+        pqueue->prear = NULL;
+    }
+
+    pqueue->visited--;
+    return p_removed;
+}
+
+// -------- THREADQUEUE HELPER FUNCTIONS IMPLEMENTATION ----------
+ThreadNode* create_th_node()
+{
+    ThreadNode* pnew;
+
+    pnew = (ThreadNode*)malloc(sizeof(ThreadNode)); // No error checking since we assume malloc never fails
+    // pdata of the newly created thread stays NULL for now, will be set when the thread is woken up
+    pnew->pnext = NULL; // QUESTION is this needed?
+    // setting conditional variable for the thread corresponding with this ThreadNode
+    cnd_init(&(pnew->cond_var));
+    return pnew;
+}
+
+void append_th_node(ThreadQueue* pth_queue, ThreadNode* pth)
+{
+    if(pth_queue->waiting == 0) 
+    {
+        pth_queue->pfirst = pth;
+        pth_queue->plast = pth;
+    }
+    else
+    {
+        pth_queue->plast->pnext = pth;
+        pth_queue->plast = pth_queue->plast->pnext;
+    }
+    pth_queue->waiting++;
+}
+
+// this function will only be used when there is at least one ThreadNode in th_queue
+ThreadNode* remove_first_th_node(ThreadQueue* pth_queue)
+{
+    ThreadNode* p_removed_th;
+
+    p_removed_th = pth_queue->pfirst;
+    pth_queue->pfirst = pth_queue->pfirst->pnext;
+    pth_queue->waiting--;
+    if(pth_queue->waiting == 0) // if num of waiting threads is now 0 we need to set plast to NULL
+    {
+        pth_queue->plast = NULL;
+    }
+
+    return p_removed_th;
+}
 
 // -------- LIBRARY FUNCTIONS IMPLEMENTATION ----------
 
