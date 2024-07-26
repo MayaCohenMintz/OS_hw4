@@ -73,7 +73,7 @@ void append_item_node(Queue* pqueue, ItemNode* pitem)
     else
     {
         pqueue->prear->pnext = pitem;
-        pqueue->prear = pqueue->prear->pnext;
+        pqueue->prear = pitem;
     }
     pqueue->size++;
 }
@@ -119,7 +119,6 @@ ThreadNode* create_th_node()
 
     pnew = (ThreadNode*)malloc(sizeof(ThreadNode)); // No error checking since we assume malloc never fails
     // pdata of the newly created thread stays NULL for now, will be set when the thread is woken up
-    pnew->pnext = NULL; // QUESTION is this needed?
     // setting conditional variable for the thread corresponding with this ThreadNode
     cnd_init(&(pnew->cond_var));
     return pnew;
@@ -135,7 +134,7 @@ void append_th_node(ThreadQueue* pth_queue, ThreadNode* pth)
     else
     {
         pth_queue->plast->pnext = pth;
-        pth_queue->plast = pth_queue->plast->pnext;
+        pth_queue->plast = pth;
     }
     pth_queue->waiting++;
 }
@@ -143,10 +142,10 @@ void append_th_node(ThreadQueue* pth_queue, ThreadNode* pth)
 // this function will only be used when there is at least one ThreadNode in th_queue
 ThreadNode* remove_first_th_node(ThreadQueue* pth_queue)
 {
-    ThreadNode* p_removed_th;
+    ThreadNode* p_removed_th; // pointer to the thread to be removed
 
     p_removed_th = pth_queue->pfirst;
-    pth_queue->pfirst = pth_queue->pfirst->pnext;
+    pth_queue->pfirst = p_removed_th->pnext;
     pth_queue->waiting--;
     if(pth_queue->waiting == 0) // if num of waiting threads is now 0 we need to set plast to NULL
     {
@@ -229,13 +228,15 @@ void enqueue(void* pdata)
 void* dequeue(void)
 {
     ItemNode* pitem;
+    ThreadNode* pth;
     void* pret_data = NULL;
+
     mtx_lock(&queue.mutex);
 
     if(queue.size == 0) // no item to dequeue
     {
-        // create thread to be associated with this dequeue action, and append it to th_queue
-        ThreadNode* pth = create_th_node();
+        // create thread node to be associated with this dequeue action, and append it to th_queue
+        pth = create_th_node();
         append_th_node(&th_queue, pth);
         // put thread to sleep so it can be signaled by enqueue when another item is inserted 
         cnd_wait(&(pth->cond_var), &queue.mutex);
@@ -250,7 +251,6 @@ void* dequeue(void)
 
     else // there is an item in the queue to dequeue
     {
-        // QUESTION how do I make this FIFO?
         // remove front of queue
         pitem = remove_first_item_node(&queue);
         // transfer the data from popped front to pret_data
@@ -264,32 +264,28 @@ void* dequeue(void)
 
 bool tryDequeue(void** returned_ptr)
 {
-    /*
-    Try to remove an item from the queue. If succeeded, return it via the argument and return true.
-    If the queue is empty, return false and leave the pointer unchanged.
-    */
-
     bool ret;
     ItemNode* pret = NULL;
 
     mtx_lock(&queue.mutex);
     if(queue.size == 0)  // no item to dequeue
     {
-    ret = false;
+        ret = false;
+        mtx_unlock(&queue.mutex);
+        return ret;
     }
     
     else // there is an item to dequeue
     {
-        // QUESTION how do I make this FIFO?
         // remove front of queue
         pret = remove_first_item_node(&queue);
+        // inserting popped item's data into returned_ptr so that we can free popped item
+        *returned_ptr = pret->pdata;
         ret = true;
+        free(pret);
+        mtx_unlock(&queue.mutex);
+        return ret;
     }
-    mtx_unlock(&queue.mutex);
-    // inserting popped item's data into returned_ptr so that we can free popped item
-    *returned_ptr = pret->pdata;
-    free(pret);
-    return ret;
 }
 
 size_t size(void)
