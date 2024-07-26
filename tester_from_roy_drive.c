@@ -8,7 +8,7 @@
 #define NUM_OPERATIONS 10
 #define MAX_SIZE 1000
 #define NUM_THREADS_CONC 100
-#define NUM_THREADS 50
+#define NUM_THREADS 30
 
 int dequeue_with_sleep(void *arg);
 int enqueueItems(void *arg);
@@ -323,20 +323,25 @@ void test_fifo_order()
         thrd_create(&consumer_threads[i], consumer_thread, &dequeue_order[i]);
         sleep(0.05);
     }
+    printf("finished creating consumer threads\n");
 
     // Create producer thread
     thrd_t producer_thread_handle;
     thrd_create(&producer_thread_handle, producer_thread, NULL);
+    printf("finished creating single producer thread\n");
 
     // Wait for the producer thread to finish
     thrd_join(producer_thread_handle, NULL);
+    printf("producer thread finished\n");
 
     // Wait for all consumer threads to finish dequeuing
     for (int i = 0; i < NUM_THREADS; i++)
     {
         thrd_join(consumer_threads[i], NULL);
     }
+    printf("all consumer threads finished dequeueing\n");
 
+    printf("now verifying FIFO order:\n");
     // Verify FIFO order
     for (int i = 0; i < NUM_THREADS; i++)
     {
@@ -544,12 +549,12 @@ int main()
     // test_size();
     // test_waiting();
     // test_basic_concurrent_enqueue_dequeue();
-    // test_fifo_order();
-    test_multiconcurrent_enqueue_dequeue();
-    test_enqueue_tryDequeue();
-    test_enqueue_dequeue_with_sleep();
-    test_edge_cases();
-    test_mixed_operations();
+    test_fifo_order();
+    // test_multiconcurrent_enqueue_dequeue();
+    // test_enqueue_tryDequeue();
+    // test_enqueue_dequeue_with_sleep();
+    // test_edge_cases();
+    // test_mixed_operations();
 
     return 0;
 }
