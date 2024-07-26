@@ -106,8 +106,8 @@ void iter_free_item_nodes(Queue* pqueue)
     {
     pto_free = pcurr;
     pcurr = pcurr->pnext;
-    pto_free->pdata = NULL; // the data was not allocated by me so no need to free it 
-    pto_free->pnext = NULL;
+    // pto_free->pdata = NULL; // the data was not allocated by me so no need to free it 
+    // pto_free->pnext = NULL;
     free(pto_free);
     }
     // now pcurr points to the last ItemNode in queue
@@ -171,8 +171,8 @@ void iter_free_th_nodes(ThreadQueue* pth_queue)
     {
     pto_free = pcurr;
     pcurr = pcurr->pnext;
-    pto_free->pdata = NULL; // the data was not allocated by me so no need to free it 
-    pto_free->pnext = NULL;
+    // pto_free->pdata = NULL; // the data was not allocated by me so no need to free it 
+    // pto_free->pnext = NULL;
     cnd_destroy(&(pto_free->cond_var));
     free(pto_free);
     }
@@ -199,10 +199,6 @@ void initQueue(void)
 
 void destroyQueue(void)
 {
-    /*
-    This function will be used for cleanup when the queue is no longer needed. It is possible for
-    initQueue to be called afterwards.
-    */
     mtx_lock(&queue.mutex);
     iter_free_item_nodes(&queue); // iteratively freeing ItemNodes in queue
     queue.pfront = NULL;
@@ -326,8 +322,8 @@ size_t visited(void)
    return queue.visited;
 }
 
-int main(int argc, char* args[])
-{
+// int main(int argc, char* args[])
+// {
 
-    return 0;
-}
+//     return 0;
+// }

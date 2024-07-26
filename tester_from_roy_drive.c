@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include <unistd.h>
-#include "dont_touch.c" // change this to queue.c
+#include "queue.c" //
 
 #define NUM_OPERATIONS 10
 #define MAX_SIZE 1000
