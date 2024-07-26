@@ -1,7 +1,7 @@
 TO RUN ROY'S TESTER:
-1. change permissions: $ chmod +x tester 
-2. compile: $ gcc -O3 -D_POSIX_C_SOURCE=200809 -Wall -std=c11 -pthread tester_from_roy_drive.c -o tester
-3. run: $ ./tester 
+1. change permissions: chmod +x tester 
+2. compile: gcc -O3 -D_POSIX_C_SOURCE=200809 -Wall -std=c11 -pthread tester_from_roy_drive.c -o tester
+3. run: ./tester 
 
 ROY'S TESTER ON DONT_CHANGE
 passes everything apart from fifo
