@@ -102,17 +102,14 @@ void iter_free_item_nodes(Queue* pqueue)
 
     // Iteratively freeing ItemNodes in queue
     pcurr = queue.pfront;
-    while(pcurr->pnext != NULL)
+    while(pcurr != NULL)
     {
     pto_free = pcurr;
     pcurr = pcurr->pnext;
-    // pto_free->pdata = NULL; // the data was not allocated by me so no need to free it 
-    // pto_free->pnext = NULL;
     free(pto_free);
     }
-    // now pcurr points to the last ItemNode in queue
-    pcurr->pdata = NULL;
-    free(pcurr);
+    pqueue->pfront = NULL;
+    pqueue->prear = NULL;
 }
 
 // -------- THREADQUEUE HELPER FUNCTIONS IMPLEMENTATION ----------
@@ -167,18 +164,15 @@ void iter_free_th_nodes(ThreadQueue* pth_queue)
 
     // Iteratively freeing ItemNodes in queue
     pcurr = th_queue.pfirst;
-    while(pcurr->pnext != NULL)
+    while(pcurr != NULL)
     {
     pto_free = pcurr;
     pcurr = pcurr->pnext;
-    // pto_free->pdata = NULL; // the data was not allocated by me so no need to free it 
-    // pto_free->pnext = NULL;
     cnd_destroy(&(pto_free->cond_var));
     free(pto_free);
     }
-    // now pcurr points to the last ThreadNode in th_queue
-    pcurr->pdata = NULL;
-    free(pcurr);
+    pth_queue->pfirst = NULL;
+    pth_queue->plast = NULL;
 }
 
 // -------- LIBRARY FUNCTIONS IMPLEMENTATION ----------
@@ -201,13 +195,9 @@ void destroyQueue(void)
 {
     mtx_lock(&queue.mutex);
     iter_free_item_nodes(&queue); // iteratively freeing ItemNodes in queue
-    queue.pfront = NULL;
-    queue.prear = NULL;
     queue.size = 0;
     queue.visited = 0;
     iter_free_th_nodes(&th_queue); // iteratively freeing ThreadNodes in th_queue
-    th_queue.pfirst = NULL;
-    th_queue.plast = NULL;
     th_queue.waiting = 0;
 
     mtx_unlock(&queue.mutex);
