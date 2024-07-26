@@ -240,6 +240,7 @@ void* dequeue(void)
         // put thread to sleep so it can be signaled by enqueue when another item is inserted 
         cnd_wait(&(pth->cond_var), &queue.mutex);
         // pth is popped from th_queue by enqueue
+        queue.visited++;
         // enqueue transfers the item's data to pth, so it can be returned before even being inserted into queue
         // now transferring data associated with dequeued item to be returned
         pret_data = pth->pdata;

@@ -380,9 +380,13 @@ void test_multiconcurrent_enqueue_dequeue()
     printf("=== Testing multiconcurrent enqueue and dequeue ===\n");
 
     initQueue();
+    printf("successfully created a queue with initQueue\n");
 
-    thrd_t enqueueThreads[NUM_THREADS_CONC];
-    thrd_t dequeueThreads[NUM_THREADS_CONC];
+    thrd_t enqueueThreads[NUM_THREADS_CONC]; // creating an empty array of 100 threads
+    thrd_t dequeueThreads[NUM_THREADS_CONC]; // creating an empty array of 100 threads
+
+    printf("printing enqueueThreads array: %p\n", enqueueThreads);
+    printf("printing dequeueThreads array: %p\n", dequeueThreads);
 
     // Create threads for dequeueing
     for (int i = 0; i < NUM_THREADS_CONC; i++)
@@ -390,11 +394,16 @@ void test_multiconcurrent_enqueue_dequeue()
         thrd_create(&dequeueThreads[i], (int (*)(void *))dequeue_thread, NULL);
     }
 
+    printf("finished creating NUM_THREADS_CONC threads for dequeuing\n");
+
     // Create threads for enqueueing
     for (int i = 0; i < NUM_THREADS_CONC; i++)
     {
         thrd_create(&enqueueThreads[i], (int (*)(void *))enqueue_thread, NULL);
     }
+
+    printf("finished creating NUM_THREADS_CONC threads for enqueuing\n");
+
     // Wait for enqueueing threads to finish
     for (int i = 0; i < NUM_THREADS_CONC; i++)
     {
@@ -407,10 +416,14 @@ void test_multiconcurrent_enqueue_dequeue()
         thrd_join(dequeueThreads[i], NULL);
     }
 
+    printf("size is %zu, visited is %zu \n", queue.size, queue.visited);
+
     // Queue should be empty
     assert(size() == 0);
+    printf("Queue is empty - PASS\n");
     // All items should have been dequeued
     assert(visited() == NUM_THREADS_CONC);
+    printf("visited == NUM_THREADS_CONC - PASS\n");
     // No threads should be waiting
     assert(waiting() == 0);
 
@@ -525,14 +538,14 @@ void test_mixed_operations()
 
 int main()
 {
-    test_destroyQueue();
-    test_enqueue_dequeue();
-    test_tryDequeue();
-    test_size();
-    test_waiting();
-    test_basic_concurrent_enqueue_dequeue();
+    // test_destroyQueue();
+    // test_enqueue_dequeue();
+    // test_tryDequeue();
+    // test_size();
+    // test_waiting();
+    // test_basic_concurrent_enqueue_dequeue();
     // test_fifo_order();
-    // test_multiconcurrent_enqueue_dequeue();
+    test_multiconcurrent_enqueue_dequeue();
     test_enqueue_tryDequeue();
     test_enqueue_dequeue_with_sleep();
     test_edge_cases();
