@@ -8,7 +8,7 @@
 #define NUM_OPERATIONS 10
 #define MAX_SIZE 1000
 #define NUM_THREADS_CONC 100
-#define NUM_THREADS 30
+#define NUM_THREADS 50
 
 int dequeue_with_sleep(void *arg);
 int enqueueItems(void *arg);
@@ -543,12 +543,12 @@ void test_mixed_operations()
 
 int main()
 {
-    // test_destroyQueue();
-    // test_enqueue_dequeue();
-    // test_tryDequeue();
-    // test_size();
-    // test_waiting();
-    // test_basic_concurrent_enqueue_dequeue();
+    test_destroyQueue();
+    test_enqueue_dequeue();
+    test_tryDequeue();
+    test_size();
+    test_waiting();
+    test_basic_concurrent_enqueue_dequeue();
     test_fifo_order();
     // test_multiconcurrent_enqueue_dequeue();
     // test_enqueue_tryDequeue();
