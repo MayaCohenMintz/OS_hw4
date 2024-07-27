@@ -321,7 +321,10 @@ void test_fifo_order()
     {
         dequeue_order[i] = -1; // Initialize the dequeue order
         thrd_create(&consumer_threads[i], consumer_thread, &dequeue_order[i]);
-        sleep(0.05);
+        // sleep(0.05);
+        thrd_sleep(
+            &(const struct timespec){.tv_nsec = 0.005 * 1000000000},
+            NULL);
     }
     printf("finished creating consumer threads\n");
 

@@ -65,7 +65,7 @@ ItemNode* create_item_node(void* pdata)
 
 void append_item_node(Queue* pqueue, ItemNode* pitem)
 {
-    if(pqueue->size == 0)
+    if(pqueue->pfront == NULL)
     {
         pqueue->pfront = pitem;
         pqueue->prear = pitem;
@@ -78,7 +78,6 @@ void append_item_node(Queue* pqueue, ItemNode* pitem)
     pqueue->size++;
 }
 
-// this function will only be used when there is at least one ItemNode in the queue
 ItemNode* remove_first_item_node(Queue* pqueue)
 {
     ItemNode* p_removed;
@@ -86,7 +85,7 @@ ItemNode* remove_first_item_node(Queue* pqueue)
     p_removed = pqueue->pfront;
     pqueue->pfront = pqueue->pfront->pnext;
     pqueue->size--;
-    if(pqueue->size == 0) // if size is 0 then 
+    if(pqueue->pfront == NULL)  
     {
         pqueue->prear = NULL;
     }
@@ -104,9 +103,9 @@ void iter_free_item_nodes(Queue* pqueue)
     pcurr = queue.pfront;
     while(pcurr != NULL)
     {
-    pto_free = pcurr;
-    pcurr = pcurr->pnext;
-    free(pto_free);
+        pto_free = pcurr;
+        pcurr = pcurr->pnext;
+        free(pto_free);
     }
     pqueue->pfront = NULL;
     pqueue->prear = NULL;
@@ -126,7 +125,7 @@ ThreadNode* create_th_node()
 
 void append_th_node(ThreadQueue* pth_queue, ThreadNode* pth)
 {
-    if(pth_queue->waiting == 0) 
+    if(pth_queue->pfirst == NULL) 
     {
         pth_queue->pfirst = pth;
         pth_queue->plast = pth;
@@ -139,7 +138,6 @@ void append_th_node(ThreadQueue* pth_queue, ThreadNode* pth)
     pth_queue->waiting++;
 }
 
-// this function will only be used when there is at least one ThreadNode in th_queue
 ThreadNode* remove_first_th_node(ThreadQueue* pth_queue)
 {
     ThreadNode* p_removed_th; // pointer to the thread to be removed
@@ -147,7 +145,7 @@ ThreadNode* remove_first_th_node(ThreadQueue* pth_queue)
     p_removed_th = pth_queue->pfirst;
     pth_queue->pfirst = p_removed_th->pnext;
     pth_queue->waiting--;
-    if(pth_queue->waiting == 0) // if num of waiting threads is now 0 we need to set plast to NULL
+    if(pth_queue->pfirst == NULL) // if num of waiting threads is now 0 we need to set plast to NULL
     {
         pth_queue->plast = NULL;
     }
@@ -165,10 +163,10 @@ void iter_free_th_nodes(ThreadQueue* pth_queue)
     pcurr = th_queue.pfirst;
     while(pcurr != NULL)
     {
-    pto_free = pcurr;
-    pcurr = pcurr->pnext;
-    cnd_destroy(&(pto_free->cond_var));
-    free(pto_free);
+        pto_free = pcurr;
+        pcurr = pcurr->pnext;
+        cnd_destroy(&(pto_free->cond_var));
+        free(pto_free);
     }
     pth_queue->pfirst = NULL;
     pth_queue->plast = NULL;
@@ -194,9 +192,9 @@ void destroyQueue(void)
 {
     mtx_lock(&queue.mutex);
     iter_free_item_nodes(&queue); // iteratively freeing ItemNodes in queue
+    iter_free_th_nodes(&th_queue); // iteratively freeing ThreadNodes in th_queue
     queue.size = 0;
     queue.visited = 0;
-    iter_free_th_nodes(&th_queue); // iteratively freeing ThreadNodes in th_queue
     th_queue.waiting = 0;
 
     mtx_unlock(&queue.mutex);
@@ -209,18 +207,18 @@ void enqueue(void* pdata)
     ItemNode* pitem;
 
     mtx_lock(&queue.mutex);
-    if(th_queue.waiting == 0)
+    if(th_queue.pfirst != NULL) // threads are waiting  
     {
-        // no thread is waiting - insert item into queue without waking a thread up 
-        pitem = create_item_node(pdata);
-        append_item_node(&queue, pitem);
-    }
-    else
-    {
-        // threads are waiting - wake up the right one
+        // wake up the right thread
         pth = remove_first_th_node(&th_queue);
         pth -> pdata = pdata;
         cnd_signal(&(pth->cond_var));
+    }
+    else // th_queue is empty
+    {
+        // insert item into queue without waking a thread up 
+        pitem = create_item_node(pdata);
+        append_item_node(&queue, pitem);
     }
     mtx_unlock(&queue.mutex);
 }
@@ -233,7 +231,7 @@ void* dequeue(void)
 
     mtx_lock(&queue.mutex);
 
-    if(queue.size == 0) // no item to dequeue
+    if(queue.pfront == NULL) // no item to dequeue
     {
         // create thread node to be associated with this dequeue action, and append it to th_queue
         pth = create_th_node();
@@ -241,10 +239,13 @@ void* dequeue(void)
         // put thread to sleep so it can be signaled by enqueue when another item is inserted 
         cnd_wait(&(pth->cond_var), &queue.mutex);
         // pth is popped from th_queue by enqueue
-        queue.visited++;
         // enqueue transfers the item's data to pth, so it can be returned before even being inserted into queue
         // now transferring data associated with dequeued item to be returned
         pret_data = pth->pdata;
+        // updating visited
+        queue.visited++;
+        // destroying cv of removed thread
+        cnd_destroy(&(pth->cond_var));
         // freeing removed thread
         free(pth);
     }
@@ -268,7 +269,7 @@ bool tryDequeue(void** returned_ptr)
     ItemNode* pret = NULL;
 
     mtx_lock(&queue.mutex);
-    if(queue.size == 0)  // no item to dequeue
+    if(queue.pfront == NULL)  // no item to dequeue
     {
         ret = false;
         mtx_unlock(&queue.mutex);
@@ -308,9 +309,3 @@ size_t visited(void)
     */
    return queue.visited;
 }
-
-// int main(int argc, char* args[])
-// {
-
-//     return 0;
-// }
